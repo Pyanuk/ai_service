@@ -166,6 +166,62 @@ def _normalize_extracted_line(value: str) -> str:
     return re.sub(r"\s+", " ", value.replace("\xa0", " ")).strip()
 
 
+_DYNAMIC_COMPETENCE_CODE_RE = re.compile(r"(?i)\b\u041f\u041a\s*(\d+\.\d+)\b")
+_DYNAMIC_COMPETENCE_SPLIT_RE = re.compile(r"(?i)(?=\b\u041f\u041a\s*\d+\.\d+\b)")
+_DYNAMIC_COMPETENCE_LEADING_RE = re.compile(r"(?is)\A\s*(\u041f\u041a\s*\d+\.\d+)\.?\s*(.*)\Z")
+_DYNAMIC_COMPETENCE_STOP_RE = re.compile(
+    r"(?is)("
+    r"\b(?:fgos\.ru|www\.|http(?:s)?://|powered by tcpdf)\b"
+    r"|\b(?:[IVX]+|\d+(?:\.\d+){1,3})\.\s+[A-ZА-ЯЁ]"
+    r"|\b(?:\u041e\u041a\s*\d+"
+    r"|\u041f\u0440\u0438\u043b\u043e\u0436\u0435\u043d\u0438\u0435"
+    r"|\u041f\u0435\u0440\u0435\u0447\u0435\u043d\u044c"
+    r"|\u041c\u0430\u0441\u0442\u0435\u0440\u0441\u043a\u0438\u0435"
+    r"|\u041f\u043e\u043b\u0438\u0433\u043e\u043d\u044b"
+    r"|\u0421\u0442\u0443\u0434\u0438\u0438"
+    r"|\u0417\u0430\u043b\u044b)\b"
+    r")"
+)
+
+
+def _sanitize_dynamic_competency_fragment(fragment: str) -> str | None:
+    normalized = _normalize_extracted_line(fragment)
+    if not normalized:
+        return None
+
+    match = _DYNAMIC_COMPETENCE_LEADING_RE.match(normalized)
+    if not match:
+        return None
+
+    code = re.sub(r"\s+", " ", match.group(1).upper()).strip()
+    text = match.group(2).strip()
+    stop_match = _DYNAMIC_COMPETENCE_STOP_RE.search(text)
+    if stop_match:
+        text = text[: stop_match.start()]
+    text = text.strip(" .;:,!?\t\r\n-–")
+    if not text:
+        return None
+    return f"{code} {text}."
+
+
+def _normalize_dynamic_competencies(values: tuple[str, ...] | list[str]) -> tuple[str, ...]:
+    normalized_competencies: list[str] = []
+    seen_codes: set[str] = set()
+
+    for value in values:
+        chunks = _DYNAMIC_COMPETENCE_SPLIT_RE.split(_normalize_extracted_line(str(value)))
+        for chunk in chunks:
+            sanitized = _sanitize_dynamic_competency_fragment(chunk)
+            code_match = _DYNAMIC_COMPETENCE_CODE_RE.search(sanitized or "")
+            code = code_match.group(1) if code_match else None
+            if sanitized and sanitized not in normalized_competencies and code not in seen_codes:
+                normalized_competencies.append(sanitized)
+                if code:
+                    seen_codes.add(code)
+
+    return tuple(normalized_competencies)
+
+
 def _extract_dynamic_competencies(extracted_text: str) -> tuple[str, ...]:
     if not extracted_text.strip():
         return ()
@@ -207,15 +263,10 @@ def _extract_dynamic_competencies(extracted_text: str) -> tuple[str, ...]:
     if current:
         competencies.append(current)
 
-    unique: list[str] = []
-    for competence in competencies:
-        normalized = re.sub(r"\s+", " ", competence).strip().rstrip(".")
-        if not normalized:
-            continue
-        rendered = f"{normalized}."
-        if rendered not in unique:
-            unique.append(rendered)
-    return tuple(unique)
+    normalized = _normalize_dynamic_competencies(competencies)
+    if normalized:
+        return normalized
+    return _normalize_dynamic_competencies([extracted_text])
 
 
 def extract_dynamic_competencies_from_text(extracted_text: str) -> tuple[str, ...]:
@@ -292,7 +343,7 @@ def _build_dynamic_activity_matrix(
 def _build_dynamic_profile(payload: dict) -> StandardProfile:
     qualification_title = payload.get("qualification_title") or "специалист в области информационных технологий"
     course_theme = payload.get("course_name") or "профильной тематике курса"
-    dynamic_competencies = tuple(payload.get("competencies") or ())
+    dynamic_competencies = _normalize_dynamic_competencies(tuple(payload.get("competencies") or ()))
     dynamic_labor_functions = _build_dynamic_labor_functions(course_theme, dynamic_competencies)
     dynamic_activity_matrix = _build_dynamic_activity_matrix(course_theme, dynamic_labor_functions)
     track = StandardTrack(
@@ -907,6 +958,10 @@ def register_dynamic_profile(
     extracted_competencies = list(_extract_dynamic_competencies(extracted_text))
     if extracted_competencies:
         payload["competencies"] = extracted_competencies
+    else:
+        sanitized_competencies = _normalize_dynamic_competencies(tuple(payload.get("competencies") or ()))
+        if sanitized_competencies:
+            payload["competencies"] = list(sanitized_competencies)
     registry[profile_id] = payload
     _save_dynamic_registry(registry)
     return _build_dynamic_profile(payload)

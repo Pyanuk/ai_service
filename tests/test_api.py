@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import json
 from pathlib import Path
 import zipfile
 
@@ -167,6 +168,73 @@ def test_resolve_pdf_rejects_dynamic_profile_without_extracted_competencies(clie
 
     assert resolved.status_code == 422
     assert "Не удалось извлечь профессиональные компетенции из PDF ФГОС 09.02.13" in resolved.json()["detail"]
+
+def test_generate_draft_sanitizes_saved_dynamic_profile_competencies(client, seed_payload):
+    settings = client.app.state.services["settings"]
+    registry_path = settings.service_root / "storage" / "standards" / "profiles.json"
+    registry_path.parent.mkdir(parents=True, exist_ok=True)
+    registry_path.write_text(
+        json.dumps(
+            {
+                "auto_fgos_spo_09_02_02": {
+                    "profile_id": "auto_fgos_spo_09_02_02",
+                    "fgos_code": "09.02.02",
+                    "title": "ФГОС СПО 09.02.02",
+                    "order_title": "приказ",
+                    "source_url": "https://registry.local/fgos/09.02.02",
+                    "professional_area": "Сетевые технологии",
+                    "qualification_level": "Уровень определяется ФГОС 09.02.02.",
+                    "parallel_education_note": "Допускается параллельное освоение.",
+                    "audience_requirements": [
+                        "Лица, имеющие среднее профессиональное и (или) высшее образование.",
+                    ],
+                    "additional_requirements": [
+                        "Наличие базовых навыков работы с компьютером.",
+                    ],
+                    "entry_requirements": "Вступительные испытания не предусмотрены.",
+                    "track_id": "generic",
+                    "qualification_title": "специалист по компьютерным сетям",
+                    "course_name": "Проектирование и администрирование защищенных компьютерных сетей",
+                    "competencies": [
+                        "ПК 1.1 Проектировать кабельную структуру компьютерной сети. 5.2.2. Организация сетевого администрирования.",
+                        "ПК 1.2 Администрировать сетевые ресурсы. fgos.ru 20.04.2026.",
+                        "ПК 2.1 Эксплуатировать объекты сетевой инфраструктуры. Приложение к ФГОС СПО 09.02.02.",
+                        "ПК 2.2 Обеспечивать защиту информации в сети. ПК 2.3 Выполнять мониторинг сети и диагностику неисправностей.",
+                    ],
+                }
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    payload = deepcopy(seed_payload)
+    payload["course_name"] = "Проектирование и администрирование защищенных компьютерных сетей"
+    payload["qualification"] = "специалист по компьютерным сетям"
+    payload["professional_area"] = "Проектирование, настройка, эксплуатация, мониторинг и защита компьютерных сетей"
+    payload["training_goal"] = "Освоение проектирования, настройки и администрирования компьютерных сетей"
+    payload["brief_description"] = "Программа посвящена проектированию и сопровождению компьютерных сетей."
+    payload["constraints"]["standard_profile_id"] = "auto_fgos_spo_09_02_02"
+    payload["constraints"]["standard_track_id"] = "generic"
+
+    generated = client.post("/api/course-drafts/generate", json=payload)
+
+    assert generated.status_code == 200
+    draft = generated.json()["draft"]
+    competencies = [item for function in draft["labor_functions"] for item in function["competencies"]]
+
+    assert competencies == [
+        "ПК 1.1 Проектировать кабельную структуру компьютерной сети.",
+        "ПК 1.2 Администрировать сетевые ресурсы.",
+        "ПК 2.1 Эксплуатировать объекты сетевой инфраструктуры.",
+        "ПК 2.2 Обеспечивать защиту информации в сети.",
+        "ПК 2.3 Выполнять мониторинг сети и диагностику неисправностей.",
+    ]
+    assert all("fgos.ru" not in item.lower() for item in competencies)
+    assert all("5.2.2" not in item for item in competencies)
+    assert all("Приложение" not in item for item in competencies)
+
 
 def test_backend_course_uses_exact_site_topics_and_practices(client, seed_payload):
     resolved = client.post(
