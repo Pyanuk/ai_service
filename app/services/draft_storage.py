@@ -48,6 +48,7 @@ class DraftStorageService:
         current_data["draft_id"] = draft_id
         current_data["document_meta"]["updated_at"] = datetime.utcnow().isoformat()
         updated = CourseDraft.model_validate(current_data)
+        self._validation.validate_seed(updated.seed)
         self._validation.validate_draft(updated)
         self.save_draft(updated)
         return updated

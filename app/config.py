@@ -45,8 +45,8 @@ class Settings:
 
         default_template_path = service_root / "program_template.docx"
         preferred_examples = [
-            service_root / "reference_example.docx",
             service_root / "правильный пример.docx",
+            service_root / "reference_example.docx",
             service_root / "program_template.docx",
         ]
         for candidate in preferred_examples:
@@ -65,7 +65,7 @@ class Settings:
             drafts_dir=Path(os.getenv("AI_SERVICE_DRAFTS_DIR", str(service_root / "storage" / "drafts"))),
             output_dir=Path(os.getenv("AI_SERVICE_OUTPUT_DIR", str(service_root / "storage" / "output"))),
             ollama_url=os.getenv("AI_SERVICE_OLLAMA_URL", "http://127.0.0.1:11434"),
-            ollama_model=os.getenv("AI_SERVICE_OLLAMA_MODEL", "qwen2.5:3b"),
+            ollama_model=os.getenv("AI_SERVICE_OLLAMA_MODEL", "qwen2.5:7b"),
             ollama_timeout_seconds=int(os.getenv("AI_SERVICE_OLLAMA_TIMEOUT", "30")),
             db_host=os.getenv("DB_HOST", "127.0.0.1"),
             db_port=int(os.getenv("DB_PORT", "5432")),

@@ -119,7 +119,7 @@ def build_settings(tmp_path: Path) -> Settings:
     return replace(
         base,
         service_root=tmp_path,
-        template_path=tmp_path / "program_template.docx",
+        template_path=base.service_root / "правильный пример.docx",
         drafts_dir=tmp_path / "drafts",
         output_dir=tmp_path / "output",
     )
@@ -168,6 +168,74 @@ def seed_payload() -> dict:
             "lessons_count": 24,
             "program_view": "ПП",
         },
+    }
+
+
+@pytest.fixture
+def devops_seed_payload() -> dict:
+    return {
+        "course_name": "Python в DevOps и автоматизация инфраструктуры",
+        "program_type": "Программа профессиональной переподготовки",
+        "format": "Заочная с применением электронного обучения и дистанционных образовательных технологий, с преподавателем в группе по фиксированному расписанию",
+        "hours": 256,
+        "target_audience": "лица, имеющие среднее профессиональное и (или) высшее образование; лица, получающие среднее профессиональное и (или) высшее образование;",
+        "qualification": "специалист по информационным системам",
+        "professional_area": "Автоматизация инфраструктуры, сопровождение и развитие программного обеспечения и информационных систем",
+        "training_goal": "Освоение Python в DevOps-практиках, автоматизации инфраструктуры, контейнеризации, оркестрации, CI/CD, мониторинге и управлении конфигурациями",
+        "brief_description": "Программа объединяет программирование на Python, инфраструктурную автоматизацию, DevOps-инструменты, контейнеризацию и оркестрацию. Слушатели осваивают построение CI/CD, администрирование через SSH, автоматизацию конфигураций с Ansible, инфраструктуру как код с Terraform, мониторинг и логирование, а также работу с Docker и Kubernetes.",
+        "modules_seed": [
+            {
+                "name": "Программирование на языке Python",
+                "desired_hours": 64,
+                "summary": "Базовый и прикладной Python для автоматизации, работы с данными, файлами, ошибками, функциями и скриптами администрирования.",
+            },
+            {
+                "name": "Python для DevOps",
+                "desired_hours": 64,
+                "summary": "Применение Python в DevOps: SSH, Linux-автоматизация, управление пользователями, Ansible, Terraform, мониторинг, логирование и основы CI/CD.",
+            },
+            {
+                "name": "Работа с Docker и Kubernetes",
+                "desired_hours": 64,
+                "summary": "Контейнеризация, Docker, Docker Compose, Kubernetes, Minikube, деплой, конфигурации, секреты, балансировка нагрузки и масштабирование.",
+            },
+            {
+                "name": "Автоматизация DevOps-процессов на Python",
+                "desired_hours": 64,
+                "summary": "Автоматизация инфраструктурных и DevOps-процессов на Python: мониторинг, логирование, CI/CD, управление облачными сервисами, Kubernetes, тестирование и анализ уязвимостей.",
+            },
+        ],
+        "constraints": {
+            "standard_profile_id": "fgos_spo_09_02_11",
+            "standard_track_id": "devops_infrastructure",
+            "standards": [
+                "Профессиональный стандарт 06.015 «Специалист по информационным системам»",
+                "ФГОС СПО 09.02.11 «Разработка и управление программным обеспечением»",
+            ],
+            "required_phrases": [
+                "дистанционные образовательные технологии",
+                "инфраструктура как код",
+                "контейнеризация",
+                "CI/CD",
+                "автоматизация инфраструктуры",
+            ],
+            "city": "Москва",
+            "document_year": 2026,
+            "organization_name": "ООО «Центр 25-12»",
+            "approval_position": "Генеральный директор",
+            "approval_name": "Е. А. Шимбирева",
+            "approval_date": "«___» ____________ {{year}} г.",
+            "teacher_name": "А.А. Шимбирёв",
+            "teacher_position": "Преподаватель высшей квалификационной категории",
+            "program_manager_name": "Е.Ю. Бойцова",
+            "program_manager_position": "Руководитель направления дополнительного профессионального образования",
+        },
+        "pricing_meta": {
+            "price": "144000",
+            "lessons_count": 144,
+            "program_view": "ПП",
+        },
+        "source_url": "https://25-12.ru/courses/python-%D0%B2-devops-%D0%B8-%D0%B0%D0%B2%D1%82%D0%BE%D0%BC%D0%B0%D1%82%D0%B8%D0%B7%D0%B0%D1%86%D0%B8%D1%8F-%D0%B8%D0%BD%D1%84%D1%80%D0%B0%D1%81%D1%82%D1%80%D1%83%D0%BA%D1%82%D1%83%D1%80%D1%8B-%D1%81/",
     }
 
 

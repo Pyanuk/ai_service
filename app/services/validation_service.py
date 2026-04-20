@@ -4,6 +4,7 @@ from app.config import Settings
 from app.schemas.course import CourseSeedRequest
 from app.schemas.draft import CourseDraft
 from app.services.errors import DraftValidationError
+from app.services.standard_profiles import resolve_standard_profile
 
 
 class ValidationService:
@@ -11,6 +12,7 @@ class ValidationService:
         self._settings = settings
 
     def validate_seed(self, seed: CourseSeedRequest) -> None:
+        resolve_standard_profile(seed)
         if not seed.modules_seed:
             raise DraftValidationError("Необходимо указать хотя бы один модуль.")
         if seed.hours <= 0:
@@ -23,6 +25,7 @@ class ValidationService:
             raise DraftValidationError("Не указан вид программы.")
 
     def validate_draft(self, draft: CourseDraft) -> None:
+        self.validate_seed(draft.seed)
         if not draft.modules:
             raise DraftValidationError("Черновик не содержит модулей.")
         if not draft.study_plan:

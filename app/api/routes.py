@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 
 from app.schemas.course import CourseSeedRequest
 from app.schemas.draft import (
@@ -10,6 +10,7 @@ from app.schemas.draft import (
     HealthResponse,
     UpdateDraftRequest,
 )
+from app.schemas.standard import StandardResolveRequest, StandardResolveResponse
 from app.services.errors import (
     DatabaseUnavailableError,
     DraftNotFoundError,
@@ -30,6 +31,29 @@ def create_router() -> APIRouter:
             ollama_available=services["ollama_service"].check_health(),
             db_available=services["db_service"].check_health(),
         )
+
+    @router.post("/standards/resolve", response_model=StandardResolveResponse)
+    def resolve_standard(payload: StandardResolveRequest, services=Depends(_get_services)) -> StandardResolveResponse:
+        try:
+            return services["standards_service"].resolve(payload)
+        except DraftValidationError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @router.post("/standards/resolve-pdf", response_model=StandardResolveResponse)
+    async def resolve_standard_pdf(
+        fgos_pdf: UploadFile = File(...),
+        fgos_code: str = Form(...),
+        services=Depends(_get_services),
+    ) -> StandardResolveResponse:
+        try:
+            payload = StandardResolveRequest(fgos_code=fgos_code)
+            return services["standards_service"].resolve_pdf(
+                filename=fgos_pdf.filename or "standard.pdf",
+                pdf_bytes=await fgos_pdf.read(),
+                payload=payload,
+            )
+        except DraftValidationError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     @router.post("/course-drafts/generate", response_model=GenerateDraftResponse)
     def generate_course_draft(payload: CourseSeedRequest, services=Depends(_get_services)) -> GenerateDraftResponse:

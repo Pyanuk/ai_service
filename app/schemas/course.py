@@ -14,6 +14,8 @@ class ModuleSeed(BaseModel):
 class Constraints(BaseModel):
     standards: List[str] = Field(default_factory=list)
     required_phrases: List[str] = Field(default_factory=list)
+    standard_profile_id: str | None = None
+    standard_track_id: str | None = None
     city: str = Field(default="Москва")
     document_year: int = Field(default=2026, ge=2024, le=2100)
     organization_name: str = Field(min_length=1)

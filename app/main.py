@@ -9,12 +9,15 @@ from app.services.document_builder import DocumentBuilder
 from app.services.draft_builder import DraftBuilder
 from app.services.draft_storage import DraftStorageService
 from app.services.ollama_service import OllamaService
+from app.services.standard_profiles import configure_dynamic_registry
+from app.services.standards_service import StandardsService
 from app.services.validation_service import ValidationService
 
 
 def create_app(service_overrides: dict | None = None, settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings.from_env()
     settings.ensure_directories()
+    configure_dynamic_registry(settings.service_root / "storage" / "standards" / "profiles.json")
 
     validation_service = ValidationService(settings)
     ollama_service = OllamaService(settings)
@@ -26,6 +29,7 @@ def create_app(service_overrides: dict | None = None, settings: Settings | None 
         "draft_storage": DraftStorageService(settings, validation_service),
         "document_builder": DocumentBuilder(settings),
         "db_service": DbService(settings),
+        "standards_service": StandardsService(),
     }
     services["draft_builder"] = DraftBuilder(settings, ollama_service, validation_service)
 
